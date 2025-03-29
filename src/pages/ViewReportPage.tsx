@@ -1,8 +1,8 @@
 import { Layout } from "@/components/layout/Layout";
 import { PageHeader } from "@/components/ui-components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { StudentAnswer, Test } from "@/lib/types";
-import { answersApi, testsApi } from "@/services/api";
+import { Student, StudentAnswer, Test } from "@/lib/types";
+import { answersApi, studentsApi, testsApi } from "@/services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -15,6 +15,7 @@ const ViewReportPage = () => {
     null
   );
   const [test, setTest] = useState<Test | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,9 +27,13 @@ const ViewReportPage = () => {
         const answerData = await answersApi.getById(answerId);
         setStudentAnswer(answerData);
 
-        // Fetch corresponding test data
-        const testData = await testsApi.getById(answerData.testId);
+        const [testData, studentData] = await Promise.all([
+          testsApi.getById(answerData.testId),
+          studentsApi.getById(answerData.studentId),
+        ]);
+
         setTest(testData);
+        setStudent(studentData);
       } catch (error) {
         console.error("Error fetching report data:", error);
         toast({
@@ -73,7 +78,7 @@ const ViewReportPage = () => {
     <Layout>
       <div className="page-container">
         <PageHeader
-          title={`${studentAnswer.studentName}'s Report`}
+          title={`${student.name}'s Report`}
           subtitle={`Test: ${test.name}`}
         />
 
@@ -83,7 +88,7 @@ const ViewReportPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Student Name</p>
-                <p className="font-medium">{studentAnswer.studentName}</p>
+                <p className="font-medium">{student.name}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Student ID</p>
@@ -97,7 +102,7 @@ const ViewReportPage = () => {
                 <p className="text-sm text-muted-foreground">Score</p>
                 <p className="font-medium">
                   {studentAnswer.totalMarks}/
-                  {test.questions.reduce((sum, q) => sum + q.marks, 0)}(
+                  {test.questions.reduce((sum, q) => sum + q.maxMarks, 0)}(
                   {studentAnswer.percentage}%)
                 </p>
               </div>
@@ -110,18 +115,18 @@ const ViewReportPage = () => {
             <div className="space-y-6">
               {test.questions.map((question, index) => {
                 const answer = studentAnswer.answers.find(
-                  (a) => a.questionId === question.id
+                  (a) => a.questionId === question._id
                 );
                 const correctOption = question.options?.find(
                   (o) => o.isCorrect
                 );
 
                 return (
-                  <div key={question.id} className="p-4 border rounded-md">
+                  <div key={question._id} className="p-4 border rounded-md">
                     <div className="flex justify-between">
                       <h3 className="font-medium">Question {index + 1}</h3>
                       <span className="text-sm">
-                        {answer?.marksAwarded || 0}/{question.marks} marks
+                        {answer?.marksAwarded || 0}/{question.maxMarks} marks
                       </span>
                     </div>
 
@@ -136,19 +141,19 @@ const ViewReportPage = () => {
                         <div className="mt-1">
                           {question.options?.map((option) => {
                             const isSelected =
-                              option.id === answer?.selectedOptionId;
+                              option._id === answer?.selectedOptionId;
                             const isCorrect = option.isCorrect;
 
                             return (
                               <div
-                                key={option.id}
+                                key={option._id}
                                 className={`p-2 my-1 rounded-md ${
                                   isSelected
                                     ? isCorrect
                                       ? "bg-green-50 border border-green-200"
                                       : "bg-red-50 border border-red-200"
                                     : isCorrect
-                                    ? "bg-blue-50 border border-blue-200"
+                                    ? "bg-green-50 border border-green-200"
                                     : "bg-gray-50 border border-gray-200"
                                 }`}
                               >
@@ -191,14 +196,14 @@ const ViewReportPage = () => {
                       <div className="mt-4 flex items-center">
                         <div
                           className={`px-2 py-1 rounded-md text-sm ${
-                            answer.marksAwarded === question.marks
+                            answer.marksAwarded === question.maxMarks
                               ? "bg-green-100 text-green-800"
                               : answer.marksAwarded > 0
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {answer.marksAwarded === question.marks
+                          {answer.marksAwarded === question.maxMarks
                             ? "Full marks"
                             : answer.marksAwarded > 0
                             ? "Partial marks"

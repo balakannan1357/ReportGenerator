@@ -34,14 +34,14 @@ export function ReportChart({ studentAnswer, test }: ReportChartProps) {
   // Prepare data for the charts
   const data = test.questions.map((question, index) => {
     const answer = studentAnswer.answers.find(
-      (a) => a.questionId === question.id
+      (a) => a.questionId === question._id
     );
     return {
       name: `Q${index + 1}`,
-      totalMarks: question.marks,
+      totalMarks: question.maxMarks,
       marksAwarded: answer?.marksAwarded || 0,
       percentage: answer
-        ? Math.round((answer.marksAwarded / question.marks) * 100)
+        ? Math.round((answer.marksAwarded / question.maxMarks) * 100)
         : 0,
     };
   });
@@ -54,7 +54,7 @@ export function ReportChart({ studentAnswer, test }: ReportChartProps) {
     {
       name: "Incorrect",
       value:
-        test.questions.reduce((sum, q) => sum + q.marks, 0) -
+        test.questions.reduce((sum, q) => sum + q.maxMarks, 0) -
         studentAnswer.totalMarks,
     },
   ];

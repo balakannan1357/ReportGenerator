@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -11,13 +10,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { formatShortDate, generateId, calculatePercentage } from "@/lib/utils";
-import { Save, Loader2 } from "lucide-react";
-import { Test, StudentAnswer, Answer } from "@/lib/types";
+import { Answer, Student, StudentAnswer, Test } from "@/lib/types";
+import { calculatePercentage, formatShortDate } from "@/lib/utils";
+import { Loader2, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface AnswerFormProps {
   readonly tests: Test[];
+  readonly students: Student[];
   readonly initialStudentAnswer?: StudentAnswer;
   readonly onSubmit: (studentAnswer: StudentAnswer) => void;
   readonly isSubmitting?: boolean;
@@ -25,6 +26,7 @@ interface AnswerFormProps {
 
 export function AnswerForm({
   tests,
+  students,
   initialStudentAnswer,
   onSubmit,
   isSubmitting = false,
@@ -37,9 +39,7 @@ export function AnswerForm({
 
   const [studentAnswer, setStudentAnswer] = useState<StudentAnswer>(
     initialStudentAnswer || {
-      id: generateId(),
       testId: "",
-      studentName: "",
       studentId: "",
       date: new Date().toISOString().split("T")[0],
       answers: [],
@@ -50,13 +50,13 @@ export function AnswerForm({
 
   useEffect(() => {
     if (selectedTestId) {
-      const test = tests.find((t) => t.id === selectedTestId);
+      const test = tests.find((t) => t._id === selectedTestId);
       if (test) {
         setSelectedTest(test);
 
         if (!initialStudentAnswer) {
           const initialAnswers = test.questions.map((question) => ({
-            questionId: question.id,
+            questionId: question._id,
             selectedOptionId: "",
             textAnswer: "",
             marksAwarded: 0,
@@ -103,7 +103,7 @@ export function AnswerForm({
     if (!selectedTest) return { totalMarks: 0, percentage: 0 };
 
     const totalAvailable = selectedTest.questions.reduce(
-      (sum, q) => sum + q.marks,
+      (sum, q) => sum + q.maxMarks,
       0
     );
 
@@ -145,7 +145,7 @@ export function AnswerForm({
             </SelectTrigger>
             <SelectContent>
               {tests.map((test) => (
-                <SelectItem key={test.id} value={test.id}>
+                <SelectItem key={test._id} value={test._id}>
                   {test.name} ({formatShortDate(test.date)})
                 </SelectItem>
               ))}
@@ -157,34 +157,29 @@ export function AnswerForm({
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="student-name">Student Name</Label>
-                <Input
-                  id="student-name"
-                  value={studentAnswer.studentName}
-                  onChange={(e) =>
-                    setStudentAnswer({
-                      ...studentAnswer,
-                      studentName: e.target.value,
-                    })
-                  }
-                  placeholder="Enter student name"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="student-id">Student ID</Label>
-                <Input
-                  id="student-id"
-                  value={studentAnswer.studentId}
-                  onChange={(e) =>
-                    setStudentAnswer({
-                      ...studentAnswer,
-                      studentId: e.target.value,
-                    })
-                  }
-                  placeholder="Enter student ID"
-                  required
-                />
+                <div>
+                  <Label htmlFor="student-select">Select Student</Label>
+                  <Select
+                    value={studentAnswer.studentId}
+                    onValueChange={(value) =>
+                      setStudentAnswer((prev) => ({
+                        ...prev,
+                        studentId: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="student-select">
+                      <SelectValue placeholder="Select a student" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student._id} value={student._id}>
+                          {student.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -194,11 +189,11 @@ export function AnswerForm({
 
                 {selectedTest.questions.map((question, questionIndex) => {
                   const answer = studentAnswer.answers.find(
-                    (a) => a.questionId === question.id
+                    (a) => a.questionId === question._id
                   );
 
                   return (
-                    <div key={question.id} className="p-6 border rounded-lg">
+                    <div key={question._id} className="p-6 border rounded-lg">
                       <div className="mb-4">
                         <h4 className="font-medium mb-1">
                           Question {questionIndex + 1}
@@ -214,7 +209,7 @@ export function AnswerForm({
                             <RadioGroup
                               value={answer?.selectedOptionId || ""}
                               onValueChange={(value) =>
-                                updateAnswer(question.id, {
+                                updateAnswer(question._id, {
                                   selectedOptionId: value,
                                 })
                               }
@@ -222,15 +217,15 @@ export function AnswerForm({
                             >
                               {question.options.map((option) => (
                                 <div
-                                  key={option.id}
+                                  key={option._id}
                                   className="flex items-center space-x-2"
                                 >
                                   <RadioGroupItem
-                                    value={option.id}
-                                    id={option.id}
+                                    value={option._id}
+                                    id={option._id}
                                   />
                                   <Label
-                                    htmlFor={option.id}
+                                    htmlFor={option._id}
                                     className="font-normal"
                                   >
                                     {option.text}
@@ -245,7 +240,7 @@ export function AnswerForm({
                           <Textarea
                             value={answer?.textAnswer || ""}
                             onChange={(e) =>
-                              updateAnswer(question.id, {
+                              updateAnswer(question._id, {
                                 textAnswer: e.target.value,
                               })
                             }
@@ -255,20 +250,20 @@ export function AnswerForm({
                         )}
 
                         <div className="mt-4">
-                          <Label htmlFor={`marks-${question.id}`}>
-                            Marks Awarded (max: {question.marks})
+                          <Label htmlFor={`marks-${question._id}`}>
+                            Marks Awarded (max: {question.maxMarks})
                           </Label>
                           <Input
-                            id={`marks-${question.id}`}
+                            id={`marks-${question._id}`}
                             type="number"
                             min="0"
-                            max={question.marks}
+                            max={question.maxMarks}
                             value={answer?.marksAwarded || 0}
                             onChange={(e) =>
-                              updateAnswer(question.id, {
+                              updateAnswer(question._id, {
                                 marksAwarded: Math.min(
                                   parseInt(e.target.value) || 0,
-                                  question.marks
+                                  question.maxMarks
                                 ),
                               })
                             }

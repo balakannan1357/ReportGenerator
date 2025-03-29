@@ -1,22 +1,26 @@
 import { StudentReportCard } from "@/components/reports/StudentReportCard";
 import { SectionHeader } from "@/components/ui-components/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { StudentAnswer, Test } from "@/lib/types";
+import { Student, StudentAnswer, Test } from "@/lib/types";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface StudentAnswerListProps {
   readonly studentAnswers: StudentAnswer[];
   readonly tests: Test[];
+  readonly students: Student[];
 }
 
 export function StudentAnswerList({
   studentAnswers,
   tests,
+  students,
 }: StudentAnswerListProps) {
-  // Get test by Id
   const getTest = (testId: string): Test | undefined => {
-    return tests.find((test) => test.id === testId);
+    return tests.find((test) => test._id === testId);
+  };
+  const getStudent = (studentId: string): Student | undefined => {
+    return students.find((student) => student._id === studentId);
   };
 
   return (
@@ -49,11 +53,15 @@ export function StudentAnswerList({
             const test = getTest(studentAnswer.testId);
             if (!test) return null;
 
+            const student = getStudent(studentAnswer.studentId);
+            if (!student) return null;
+
             return (
               <StudentReportCard
-                key={studentAnswer.id}
+                key={studentAnswer._id}
                 studentAnswer={studentAnswer}
                 test={test}
+                student={student}
               />
             );
           })}

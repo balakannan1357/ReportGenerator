@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -17,16 +15,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Option, Question, Test } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   Calendar as CalendarIcon,
-  Plus,
-  Trash,
-  Save,
   Loader2,
+  Plus,
+  Save,
+  Trash,
 } from "lucide-react";
-import { cn, generateId } from "@/lib/utils";
-import { Test, Question, Option } from "@/lib/types";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface TestFormProps {
   readonly initialTest?: Test;
@@ -46,9 +46,9 @@ export function TestForm({
 
   const [test, setTest] = useState<Test>(
     initialTest || {
-      id: generateId(),
       name: "",
       date: format(new Date(), "yyyy-MM-dd"),
+      description: "",
       questions: [],
     }
   );
@@ -59,14 +59,13 @@ export function TestForm({
       questions: [
         ...test.questions,
         {
-          id: generateId(),
           text: "",
           type: "multiple-choice",
-          marks: 1,
+          maxMarks: 1,
           options: [
-            { id: generateId(), text: "", isCorrect: false },
-            { id: generateId(), text: "", isCorrect: false },
-            { id: generateId(), text: "", isCorrect: false },
+            { text: "", isCorrect: false },
+            { text: "", isCorrect: false },
+            { text: "", isCorrect: false },
           ],
         },
       ],
@@ -94,7 +93,6 @@ export function TestForm({
     }
 
     question.options.push({
-      id: generateId(),
       text: "",
       isCorrect: false,
     });
@@ -187,6 +185,16 @@ export function TestForm({
             </PopoverContent>
           </Popover>
         </div>
+
+        <div>
+          <Label htmlFor="test-description">Description</Label>
+          <Textarea
+            id="test-description"
+            value={test.description}
+            onChange={(e) => setTest({ ...test, description: e.target.value })}
+            placeholder="Enter test description"
+          />
+        </div>
       </div>
 
       <div className="mt-8">
@@ -212,7 +220,7 @@ export function TestForm({
         ) : (
           <div className="space-y-8">
             {test.questions.map((question, questionIndex) => (
-              <div key={question.id} className="p-6 border rounded-lg">
+              <div key={question._id} className="p-6 border rounded-lg">
                 <div className="flex justify-between mb-4">
                   <h4 className="font-medium">Question {questionIndex + 1}</h4>
                   <Button
@@ -280,10 +288,10 @@ export function TestForm({
                         id={`question-marks-${questionIndex}`}
                         type="number"
                         min="1"
-                        value={question.marks}
+                        value={question.maxMarks}
                         onChange={(e) =>
                           updateQuestion(questionIndex, {
-                            marks: parseInt(e.target.value) || 1,
+                            maxMarks: parseInt(e.target.value) || 1,
                           })
                         }
                         required
@@ -309,7 +317,7 @@ export function TestForm({
                         <div className="space-y-2">
                           {question.options.map((option, optionIndex) => (
                             <div
-                              key={option.id}
+                              key={option._id}
                               className="flex items-center gap-2"
                             >
                               <Input

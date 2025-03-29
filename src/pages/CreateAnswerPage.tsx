@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { PageHeader } from "@/components/ui-components/PageHeader";
 import { AnswerForm } from "@/components/answer-submission/AnswerForm";
-import { StudentAnswer, Test } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
-import { testsApi, answersApi } from "@/services/api";
+import { PageHeader } from "@/components/ui-components/PageHeader";
+import { useToast } from "@/hooks/use-toast";
+import { Student, StudentAnswer, Test } from "@/lib/types";
+import { answersApi, studentsApi, testsApi } from "@/services/api";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const CreateAnswerPage = () => {
   const navigate = useNavigate();
@@ -13,11 +13,11 @@ const CreateAnswerPage = () => {
   const { toast } = useToast();
   const [initialTestId, setInitialTestId] = useState<string | null>(null);
   const [tests, setTests] = useState<Test[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Extract testId from query parameters
     const params = new URLSearchParams(location.search);
     const testId = params.get("testId");
     if (testId) {
@@ -26,16 +26,20 @@ const CreateAnswerPage = () => {
   }, [location]);
 
   useEffect(() => {
-    const fetchTests = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await testsApi.getAll();
-        setTests(data);
+        const [testsData, studentsData] = await Promise.all([
+          testsApi.getAll(),
+          studentsApi.getAll(),
+        ]);
+        setTests(testsData);
+        setStudents(studentsData);
       } catch (error) {
-        console.error("Error fetching tests:", error);
+        console.error("Error fetching data:", error);
         toast({
           title: "Error",
-          description: "Failed to load tests. Please try again later.",
+          description: "Failed to load data. Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -43,7 +47,7 @@ const CreateAnswerPage = () => {
       }
     };
 
-    fetchTests();
+    fetchData();
   }, [toast]);
 
   const handleSubmit = async (studentAnswer: StudentAnswer) => {
@@ -87,15 +91,14 @@ const CreateAnswerPage = () => {
           <div className="mt-8">
             <AnswerForm
               tests={tests}
+              students={students}
               onSubmit={handleSubmit}
               initialStudentAnswer={
                 initialTestId
                   ? {
-                      id: "",
                       testId: initialTestId,
-                      studentName: "",
                       studentId: "",
-                      date: new Date().toISOString().split("T")[0],
+                      date: new Date().toISOString(),
                       answers: [],
                       totalMarks: 0,
                       percentage: 0,

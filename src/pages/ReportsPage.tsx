@@ -1,28 +1,31 @@
-import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/ui-components/PageHeader";
-import { StudentAnswerList } from "@/components/reports/StudentAnswerList";
-import { StudentAnswer, Test } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
-import { testsApi, answersApi } from "@/services/api";
+import { StudentAnswerList } from "@/components/reports/StudentAnswerList";
+import { PageHeader } from "@/components/ui-components/PageHeader";
+import { useToast } from "@/hooks/use-toast";
+import { Student, StudentAnswer, Test } from "@/lib/types";
+import { answersApi, studentsApi, testsApi } from "@/services/api";
+import { useEffect, useState } from "react";
 
 const ReportsPage = () => {
   const { toast } = useToast();
   const [studentAnswers, setStudentAnswers] = useState<StudentAnswer[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [testsData, answersData] = await Promise.all([
+        const [testsData, answersData, studentsData] = await Promise.all([
           testsApi.getAll(),
           answersApi.getAll(),
+          studentsApi.getAll(),
         ]);
 
         setTests(testsData);
         setStudentAnswers(answersData);
+        setStudents(studentsData);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -52,7 +55,11 @@ const ReportsPage = () => {
           </div>
         ) : (
           <div className="mt-8">
-            <StudentAnswerList studentAnswers={studentAnswers} tests={tests} />
+            <StudentAnswerList
+              studentAnswers={studentAnswers}
+              tests={tests}
+              students={students}
+            />
           </div>
         )}
       </div>

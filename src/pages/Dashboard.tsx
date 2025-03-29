@@ -1,35 +1,80 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { PageHeader } from "@/components/ui-components/PageHeader";
-import { TestList } from "@/components/dashboard/TestList";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { Button } from "@/components/ui/button";
-import { mockTests, mockStudentAnswers } from "@/lib/utils";
-import { Check, FileText, GraduationCap } from "lucide-react";
-import { Test } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
+import { TestList } from "@/components/dashboard/TestList";
 import { Layout } from "@/components/layout/Layout";
+import { PageHeader } from "@/components/ui-components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { StudentAnswer, Test } from "@/lib/types";
+import { answersApi, testsApi } from "@/services/api";
+import { Check, FileText, GraduationCap, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { toast } = useToast();
-  const [tests, setTests] = useState<Test[]>(mockTests);
+  const [tests, setTests] = useState<Test[]>([]);
+  const [studentAnswers, setStudentAnswers] = useState<StudentAnswer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const deleteTest = (id: string) => {
-    setTests(tests.filter((test) => test.id !== id));
-    toast({
-      title: "Test deleted",
-      description: "The test has been successfully deleted.",
-      variant: "default",
-    });
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [testsData, answersData] = await Promise.all([
+          testsApi.getAll(),
+          answersApi.getAll(),
+        ]);
+
+        setTests(testsData);
+        setStudentAnswers(answersData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load data. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
+
+  const deleteTest = async (id: string) => {
+    try {
+      await testsApi.delete(id);
+      setTests(tests.filter((test) => test._id !== id));
+      toast({
+        title: "Test deleted",
+        description: "The test has been successfully deleted.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Failed to delete test:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete test. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Calculate stats
-  const totalTests = tests.length;
-  const totalQuestions = tests.reduce(
+  const totalTests = tests?.length;
+  const totalQuestions = tests?.reduce(
     (sum, test) => sum + test.questions.length,
     0
   );
-  const totalStudents = mockStudentAnswers.length;
+  const totalStudents = studentAnswers.length;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <Layout>

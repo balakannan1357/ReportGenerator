@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/ui-components/PageHeader";
 import { TestList } from "@/components/dashboard/TestList";
-import { Test } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
+import { PageHeader } from "@/components/ui-components/PageHeader";
+import { useToast } from "@/hooks/use-toast";
+import { Test } from "@/lib/types";
 import { testsApi } from "@/services/api";
+import { useEffect, useState } from "react";
 
 const TestsPage = () => {
   const [tests, setTests] = useState<Test[]>([]);
@@ -35,7 +35,7 @@ const TestsPage = () => {
   const handleDeleteTest = async (id: string) => {
     try {
       await testsApi.delete(id);
-      setTests(tests.filter((test) => test.id !== id));
+      setTests(tests.filter((test) => test._id !== id));
 
       toast({
         title: "Test deleted",

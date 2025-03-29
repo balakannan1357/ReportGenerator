@@ -1,30 +1,37 @@
 import {
-  SidebarProvider,
   Sidebar,
   SidebarContent,
-  SidebarTrigger,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
-  GraduationCap,
-  List,
-  FileText,
   BarChart,
+  FileText,
+  GraduationCap,
+  LandPlot,
+  LayoutDashboard,
+  List,
   Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
-interface LayoutProps {
-  readonly children: React.ReactNode;
-}
+const menuItems = [
+  { path: "/", label: "Dashboard", icon: List },
+  { path: "/tests", label: "Tests", icon: FileText },
+  { path: "/answers", label: "Student Answers", icon: LandPlot },
+  { path: "/students", label: "Students", icon: GraduationCap },
+  { path: "/reports", label: "Reports", icon: BarChart },
+  { path: "/settings", label: "Settings", icon: Settings },
+];
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children }) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -43,92 +50,34 @@ export function Layout({ children }: LayoutProps) {
 
 function AppSidebar() {
   const location = useLocation();
-
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
 
   return (
     <Sidebar>
       <SidebarContent>
-        <div className="py-6 px-4">
-          <h2 className="text-xl font-bold text-white">Arikkaiyagam</h2>
-          <p className="text-white/80 text-sm">Report Hub</p>
+        <div className="py-6 px-4 flex items-center justify-center">
+          <LayoutDashboard size={80} />
         </div>
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    isActive("/") &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Link to="/">
-                    <List size={18} />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    isActive("/tests") &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Link to="/tests">
-                    <FileText size={18} />
-                    <span>Tests</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    isActive("/answers") &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Link to="/answers">
-                    <GraduationCap size={18} />
-                    <span>Student Answers</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    isActive("/reports") &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Link to="/reports">
-                    <BarChart size={18} />
-                    <span>Reports</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    isActive("/settings") &&
-                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  <Link to="/settings">
-                    <Settings size={18} />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {menuItems.map(({ path, label, icon: Icon }) => (
+                <SidebarMenuItem key={path}>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      isActive(path) &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <Link to={path}>
+                      <Icon size={18} />
+                      <span>{label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

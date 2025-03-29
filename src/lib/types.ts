@@ -1,28 +1,28 @@
 export interface Test {
-  id: string;
+  _id?: string;
   name: string;
   date: string;
+  description: string;
   questions: Question[];
 }
 
 export interface Question {
-  id: string;
+  _id?: string;
   text: string;
   options?: Option[];
   type: "multiple-choice" | "short-answer" | "essay";
-  marks: number;
+  maxMarks: number;
 }
 
 export interface Option {
-  id: string;
+  _id?: string;
   text: string;
   isCorrect: boolean;
 }
 
 export interface StudentAnswer {
-  id: string;
+  _id?: string;
   testId: string;
-  studentName: string;
   studentId: string;
   date: string;
   answers: Answer[];
@@ -35,6 +35,14 @@ export interface Answer {
   selectedOptionId?: string;
   textAnswer?: string;
   marksAwarded: number;
+}
+
+export interface Student {
+  _id?: string;
+  rollNum: string;
+  name: string;
+  email: string;
+  age: number;
 }
 
 export interface Report {

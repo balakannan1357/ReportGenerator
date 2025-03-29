@@ -10,61 +10,40 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Test } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
-import { CalendarIcon, Edit, FileText, Trash2 } from "lucide-react";
+import { Student } from "@/lib/types";
+import { Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-interface TestCardProps {
-  test: Test;
+interface StudentCardProps {
+  student: Student;
   onDelete: (id: string) => void;
 }
 
-export const TestCard = ({ test, onDelete }: TestCardProps) => {
+export const StudentCard = ({ student, onDelete }: StudentCardProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleEdit = () => {
-    navigate(`/tests/${test._id}`);
+    navigate(`/students/${student._id}`);
   };
 
   const confirmDelete = () => {
-    onDelete(test._id);
+    onDelete(student._id);
     setIsDeleteDialogOpen(false);
   };
 
   return (
     <>
-      <Card className="overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
-        <div className="exam-card-gradient p-6 text-white">
-          <h3 className="font-bold text-xl mb-1">{test.name}</h3>
-          <div className="flex items-center text-white/80 text-sm">
-            <CalendarIcon className="h-4 w-4 mr-1" />
-            <span>{formatDate(test.date)}</span>
+      <Card className="overflow-hidden flex flex-row h-full hover:shadow-md transition-shadow justify-between">
+        <div className="p-5">
+          <h3 className="font-bold text-xl mb-1">{student.name}</h3>
+          <div className="flex items-center text-sm">
+            <span>{student.rollNum}</span>
           </div>
         </div>
-        <div className="p-6 flex-1 flex flex-col">
-          <p className="text-muted-foreground mb-4 flex-1">
-            {test.description || "No description provided"}
-          </p>
-          <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-            <span className="flex items-center">
-              <FileText className="h-4 w-4 mr-1" />
-              {test.questions.length} Questions
-            </span>
-            <span>
-              Total: {test.questions.reduce((sum, q) => sum + q.maxMarks, 0)}{" "}
-              marks
-            </span>
-          </div>
-          <div className="flex gap-2 mt-auto">
-            <Button variant="outline" className="flex-1" asChild>
-              <Link to={`/answers/new?testId=${test._id}`}>
-                <FileText className="mr-2 h-4 w-4" />
-                Record Answers
-              </Link>
-            </Button>
+        <div className="px-3 flex flex-col items-center justify-center">
+          <div className="flex gap-2">
             <Button variant="ghost" size="icon" onClick={handleEdit}>
               <Edit className="h-4 w-4" />
             </Button>
@@ -88,7 +67,7 @@ export const TestCard = ({ test, onDelete }: TestCardProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the test "{test.name}" and all
+              This will permanently delete the student "{student.name}" and all
               associated answers and reports. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
