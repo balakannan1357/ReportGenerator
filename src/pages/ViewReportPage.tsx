@@ -1,9 +1,13 @@
 import { Layout } from "@/components/layout/Layout";
+import { ReportChart } from "@/components/reports/ReportChart";
 import { PageHeader } from "@/components/ui-components/PageHeader";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Student, StudentAnswer, Test } from "@/lib/types";
-import { answersApi, studentsApi, testsApi } from "@/services/api";
-import { useEffect, useState } from "react";
+import { answersApi, studentsApi, testsApi } from "@/services/api.service";
+import { exportToPdf } from "@/services/export.service";
+import { FileText } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 const ViewReportPage = () => {
@@ -17,6 +21,10 @@ const ViewReportPage = () => {
   const [test, setTest] = useState<Test | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Add reference to the report element for PDF export
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +58,28 @@ const ViewReportPage = () => {
     fetchData();
   }, [answerId, navigate, toast]);
 
+  const handleExportPdf = async () => {
+    if (!studentAnswer || !test || !reportRef.current) return;
+
+    try {
+      setIsExporting(true);
+      await exportToPdf(studentAnswer, student, test, reportRef.current);
+      toast({
+        title: "Success",
+        description: "Report exported successfully",
+      });
+    } catch (error) {
+      console.error("Error exporting report:", error);
+      toast({
+        title: "Export failed",
+        description: "Could not export the report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -77,12 +107,28 @@ const ViewReportPage = () => {
   return (
     <Layout>
       <div className="page-container">
-        <PageHeader
-          title={`${student.name}'s Report`}
-          subtitle={`Test: ${test.name}`}
-        />
+        <div className="flex justify-between items-center">
+          <PageHeader
+            title={`${student.name}'s Report`}
+            subtitle={`Test: ${test.name}`}
+          />
+          <Button
+            onClick={handleExportPdf}
+            className="flex items-center gap-2"
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>Exporting...</>
+            ) : (
+              <>
+                <FileText className="w-4 h-4" />
+                Export PDF
+              </>
+            )}
+          </Button>
+        </div>
 
-        <div className="mt-8">
+        <div className="mt-8" ref={reportRef}>
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Student Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,8 +137,10 @@ const ViewReportPage = () => {
                 <p className="font-medium">{student.name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Student ID</p>
-                <p className="font-medium">{studentAnswer.studentId}</p>
+                <p className="text-sm text-muted-foreground">
+                  Student Roll Number
+                </p>
+                <p className="font-medium">{student.rollNum}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Test Date</p>
@@ -107,6 +155,10 @@ const ViewReportPage = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <ReportChart studentAnswer={studentAnswer} test={test} />
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
