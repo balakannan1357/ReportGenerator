@@ -10,7 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Answer, Student, StudentAnswer, Test } from "@/lib/types";
+import { QuestionType } from "@/lib/enum";
+import { Answer, Question, Student, StudentAnswer, Test } from "@/lib/types";
 import { calculatePercentage, formatShortDate } from "@/lib/utils";
 import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -72,22 +73,32 @@ export function AnswerForm({
     }
   }, [selectedTestId, tests, initialStudentAnswer]);
 
-  const updateAnswer = (questionId: string, answerData: Partial<Answer>) => {
+  const updateAnswer = (question: Question, answerData: Partial<Answer>) => {
     setStudentAnswer((prev) => {
       const updatedAnswers = [...prev.answers];
       const answerIndex = updatedAnswers.findIndex(
-        (a) => a.questionId === questionId
+        (a) => a.questionId === question._id
       );
+      const isCorrect =
+        question.options?.find((o) => o._id === answerData.selectedOptionId)
+          ?.isCorrect ?? false;
+      const marksAwarded =
+        question.type === QuestionType.MULTIPLE_CHOICE
+          ? isCorrect
+            ? question.maxMarks
+            : 0
+          : updatedAnswers[answerIndex]?.marksAwarded;
 
       if (answerIndex >= 0) {
         updatedAnswers[answerIndex] = {
           ...updatedAnswers[answerIndex],
           ...answerData,
+          marksAwarded: answerData.marksAwarded || marksAwarded,
         };
       } else {
         updatedAnswers.push({
-          questionId,
-          marksAwarded: 0,
+          questionId: question._id,
+          marksAwarded,
           ...answerData,
         } as Answer);
       }
@@ -209,7 +220,7 @@ export function AnswerForm({
                             <RadioGroup
                               value={answer?.selectedOptionId || ""}
                               onValueChange={(value) =>
-                                updateAnswer(question._id, {
+                                updateAnswer(question, {
                                   selectedOptionId: value,
                                 })
                               }
@@ -240,7 +251,7 @@ export function AnswerForm({
                           <Textarea
                             value={answer?.textAnswer || ""}
                             onChange={(e) =>
-                              updateAnswer(question._id, {
+                              updateAnswer(question, {
                                 textAnswer: e.target.value,
                               })
                             }
@@ -260,7 +271,7 @@ export function AnswerForm({
                             max={question.maxMarks}
                             value={answer?.marksAwarded || 0}
                             onChange={(e) =>
-                              updateAnswer(question._id, {
+                              updateAnswer(question, {
                                 marksAwarded: Math.min(
                                   parseInt(e.target.value) || 0,
                                   question.maxMarks
