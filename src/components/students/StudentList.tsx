@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { Student } from "@/lib/types";
-import { studentsApi } from "@/services/api";
+import { studentsApi } from "@/services/api.service";
 import { Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";

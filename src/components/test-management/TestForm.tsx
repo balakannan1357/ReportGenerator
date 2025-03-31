@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { QuestionType } from "@/lib/enum";
 import { Option, Question, Test } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -60,7 +61,7 @@ export function TestForm({
         ...test.questions,
         {
           text: "",
-          type: "multiple-choice",
+          type: QuestionType.MULTIPLE_CHOICE,
           maxMarks: 1,
           options: [
             { text: "", isCorrect: false },
@@ -258,10 +259,7 @@ export function TestForm({
                         value={question.type}
                         onValueChange={(value) =>
                           updateQuestion(questionIndex, {
-                            type: value as
-                              | "multiple-choice"
-                              | "short-answer"
-                              | "essay",
+                            type: value as QuestionType,
                           })
                         }
                       >

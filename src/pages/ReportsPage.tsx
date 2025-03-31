@@ -3,7 +3,7 @@ import { StudentAnswerList } from "@/components/reports/StudentAnswerList";
 import { PageHeader } from "@/components/ui-components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Student, StudentAnswer, Test } from "@/lib/types";
-import { answersApi, studentsApi, testsApi } from "@/services/api";
+import { answersApi, studentsApi, testsApi } from "@/services/api.service";
 import { useEffect, useState } from "react";
 
 const ReportsPage = () => {

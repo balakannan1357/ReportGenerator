@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { PageHeader } from "@/components/ui-components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Test } from "@/lib/types";
-import { testsApi } from "@/services/api";
+import { testsApi } from "@/services/api.service";
 import { useEffect, useState } from "react";
 
 const TestsPage = () => {

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui-components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAnswer, Test } from "@/lib/types";
-import { answersApi, testsApi } from "@/services/api";
+import { answersApi, testsApi } from "@/services/api.service";
 import { Check, FileText, GraduationCap, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";

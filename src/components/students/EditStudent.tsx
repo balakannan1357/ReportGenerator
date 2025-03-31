@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Student } from "@/lib/types";
-import { studentsApi } from "@/services/api";
+import { studentsApi } from "@/services/api.service";
 import { Loader2, Save } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";

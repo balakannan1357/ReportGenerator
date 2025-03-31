@@ -5,7 +5,7 @@ import { TestForm } from "@/components/test-management/TestForm";
 import { Test } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
-import { testsApi } from "@/services/api";
+import { testsApi } from "@/services/api.service";
 
 const EditTestPage = () => {
   const navigate = useNavigate();

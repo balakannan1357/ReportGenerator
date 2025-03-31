@@ -1,3 +1,5 @@
+import { QuestionType } from "./enum";
+
 export interface Test {
   _id?: string;
   name: string;
@@ -10,7 +12,7 @@ export interface Question {
   _id?: string;
   text: string;
   options?: Option[];
-  type: "multiple-choice" | "short-answer" | "essay";
+  type: QuestionType;
   maxMarks: number;
 }
 
