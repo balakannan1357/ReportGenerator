@@ -54,15 +54,15 @@ const CreateAnswerPage = () => {
     setIsSubmitting(true);
 
     try {
-      await answersApi.create(studentAnswer);
+      await answersApi.create(studentAnswer).then((res: StudentAnswer) => {
+        toast({
+          title: "Answers recorded",
+          description: "Student answers have been successfully recorded.",
+          variant: "default",
+        });
 
-      toast({
-        title: "Answers recorded",
-        description: "Student answers have been successfully recorded.",
-        variant: "default",
+        navigate(`/answers/${res._id}`);
       });
-
-      navigate("/answers");
     } catch (error) {
       console.error("Error submitting answers:", error);
       toast({
@@ -80,7 +80,7 @@ const CreateAnswerPage = () => {
       <div className="page-container">
         <PageHeader
           title="Record Student Answers"
-          subtitle="Select a test and enter student answers for evaluation"
+          subtitle="Select a test and enter marks for each question"
         />
 
         {isLoading ? (
@@ -98,7 +98,7 @@ const CreateAnswerPage = () => {
                   ? {
                       testId: initialTestId,
                       studentId: "",
-                      date: new Date().toISOString(),
+                      date: new Date().toISOString().split("T")[0],
                       answers: [],
                       totalMarks: 0,
                       percentage: 0,

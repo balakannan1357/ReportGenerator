@@ -57,15 +57,9 @@ export function StudentReportCard({
 
       <div className="mt-6 flex gap-2">
         <Button variant="outline" className="flex-1" asChild>
-          <Link to={`/reports/${studentAnswer._id}`}>
+          <Link to={`/answers/${studentAnswer._id}`}>
             <Eye className="mr-2 h-4 w-4" />
             View
-          </Link>
-        </Button>
-        <Button variant="outline" className="flex-1" asChild>
-          <Link to={`/reports/${studentAnswer._id}/download`}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
           </Link>
         </Button>
       </div>

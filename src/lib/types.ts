@@ -1,25 +1,24 @@
-import { QuestionType } from "./enum";
+import { QuestionCategory } from "./enum";
 
 export interface Test {
   _id?: string;
   name: string;
   date: string;
   description: string;
+  course: string;
+  batch: string;
+  exam: string;
+  totalMarks: number;
   questions: Question[];
 }
 
 export interface Question {
   _id?: string;
-  text: string;
-  options?: Option[];
-  type: QuestionType;
+  subject: string;
+  chapter: string;
+  topic: string;
+  category?: QuestionCategory;
   maxMarks: number;
-}
-
-export interface Option {
-  _id?: string;
-  text: string;
-  isCorrect: boolean;
 }
 
 export interface StudentAnswer {
@@ -34,8 +33,6 @@ export interface StudentAnswer {
 
 export interface Answer {
   questionId: string;
-  selectedOptionId?: string;
-  textAnswer?: string;
   marksAwarded: number;
 }
 
@@ -53,4 +50,30 @@ export interface Report {
   test: Test;
   studentAnswer: StudentAnswer;
   generatedAt: string;
+}
+
+export interface ReportCard extends CreatorBase {
+  studentName: string;
+  course: string;
+  batch: string;
+  exam: string;
+  date: string;
+  totalMarks: number;
+  obtainedMarks: number;
+  items: EvaluationEntry[];
+}
+
+export interface EvaluationEntry {
+  subject: string;
+  chapter: string;
+  topic: string;
+  category: QuestionCategory;
+  maxMarks: number;
+  obtainedMarks: number;
+}
+
+export interface CreatorBase {
+  _id?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -1,11 +1,10 @@
 import { Layout } from "@/components/layout/Layout";
-import { ReportChart } from "@/components/reports/ReportChart";
+import ReportChart, { ChildRef } from "@/components/reports/ReportChart";
 import { PageHeader } from "@/components/ui-components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Student, StudentAnswer, Test } from "@/lib/types";
 import { answersApi, studentsApi, testsApi } from "@/services/api.service";
-import { exportToPdf } from "@/services/export.service";
 import { FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -14,6 +13,7 @@ const ViewReportPage = () => {
   const { answerId } = useParams<{ answerId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const chartRef = useRef<ChildRef>(null);
 
   const [studentAnswer, setStudentAnswer] = useState<StudentAnswer | null>(
     null
@@ -22,9 +22,6 @@ const ViewReportPage = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-
-  // Add reference to the report element for PDF export
-  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,27 +56,24 @@ const ViewReportPage = () => {
   }, [answerId, navigate, toast]);
 
   const handleExportPdf = async () => {
-    if (!studentAnswer || !test || !reportRef.current) return;
+    if (!studentAnswer) return;
+    setIsExporting(true);
 
     try {
-      setIsExporting(true);
-      await exportToPdf(studentAnswer, student, test, reportRef.current);
-      toast({
-        title: "Success",
-        description: "Report exported successfully",
-      });
+      if (chartRef.current) {
+        chartRef.current.generatePdf();
+      }
     } catch (error) {
-      console.error("Error exporting report:", error);
+      console.error("Error exporting PDF:", error);
       toast({
-        title: "Export failed",
-        description: "Could not export the report",
+        title: "Error",
+        description: "Failed to export report.",
         variant: "destructive",
       });
     } finally {
       setIsExporting(false);
     }
   };
-
   if (isLoading) {
     return (
       <Layout>
@@ -109,8 +103,8 @@ const ViewReportPage = () => {
       <div className="page-container">
         <div className="flex justify-between items-center">
           <PageHeader
-            title={`${student.name}'s Report`}
-            subtitle={`Test: ${test.name}`}
+            className=" text-indigo-700"
+            title={`${test.name} Report for ${student.name}`}
           />
           <Button
             onClick={handleExportPdf}
@@ -118,37 +112,46 @@ const ViewReportPage = () => {
             disabled={isExporting}
           >
             {isExporting ? (
-              <>Exporting...</>
+              <>Downloading...</>
             ) : (
               <>
                 <FileText className="w-4 h-4" />
-                Export PDF
+                Download PDF
               </>
             )}
           </Button>
         </div>
 
-        <div className="mt-8" ref={reportRef}>
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Student Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-3 rounded-md shadow-md border border-gray-300 bg-white p-4">
+          <div className="bg-white p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Student Name</p>
-                <p className="font-medium">{student.name}</p>
+                <p className="text-sm text-muted-foreground">Course</p>
+                <p className="font-medium">{test.course}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Student Roll Number
-                </p>
-                <p className="font-medium">{student.rollNum}</p>
+                <p className="text-sm text-muted-foreground">Batch</p>
+                <p className="font-medium">{test.batch}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Exam</p>
+                <p className="font-medium">{test.exam}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Test Date</p>
                 <p className="font-medium">{studentAnswer.date}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Score</p>
-                <p className="font-medium">
+                <p className="text-sm text-muted-foreground">Marks</p>
+                <p
+                  className={`font-medium ${
+                    studentAnswer.percentage >= 70
+                      ? "text-green-600"
+                      : studentAnswer.percentage >= 40
+                      ? "text-orange-500"
+                      : "text-red-600"
+                  }`}
+                >
                   {studentAnswer.totalMarks}/
                   {test.questions.reduce((sum, q) => sum + q.maxMarks, 0)}(
                   {studentAnswer.percentage}%)
@@ -157,144 +160,101 @@ const ViewReportPage = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <ReportChart studentAnswer={studentAnswer} test={test} />
+          <div className="bg-white mb-6">
+            <ReportChart
+              ref={chartRef}
+              studentAnswer={studentAnswer}
+              test={test}
+              student={student}
+            />
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white ">
             <h2 className="text-xl font-semibold mb-4">Test Results</h2>
 
             <div className="space-y-6">
-              {test.questions.map((question, index) => {
-                const answer = studentAnswer.answers.find(
-                  (a) => a.questionId === question._id
-                );
-                const correctOption = question.options?.find(
-                  (o) => o.isCorrect
-                );
+              <div className="p-4 border rounded-md">
+                <div className="flex justify-between">
+                  <table className="table-fixed w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 w-[60px] text-left text-sm font-medium">
+                          No.
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Subject
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Chapter
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Topic
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Category
+                        </th>
+                        <th className="p-3 w-[100px] text-center text-sm font-medium">
+                          Max Marks
+                        </th>
+                        <th className="p-3 text-center text-sm font-medium">
+                          Marks Awarded
+                        </th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {test.questions.map((question, questionIndex) => {
+                        const answer = studentAnswer.answers.find(
+                          (a) => a.questionId === question._id
+                        );
 
-                return (
-                  <div key={question._id} className="p-4 border rounded-md">
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">Question {index + 1}</h3>
-                      <span className="text-sm">
-                        {answer?.marksAwarded || 0}/{question.maxMarks} marks
-                      </span>
-                    </div>
-
-                    <p className="mt-2">{question.text}</p>
-
-                    <div className="mt-4">
-                      <p className="text-sm text-muted-foreground">
-                        Student's Answer:
-                      </p>
-
-                      {question.type === "multiple-choice" && (
-                        <div className="mt-1">
-                          {question.options?.map((option) => {
-                            const isSelected =
-                              option._id === answer?.selectedOptionId;
-                            const isCorrect = option.isCorrect;
-
-                            return (
-                              <div
-                                key={option._id}
-                                className={`p-2 my-1 rounded-md ${
-                                  isSelected
-                                    ? isCorrect
-                                      ? "bg-green-50 border border-green-200"
-                                      : "bg-red-50 border border-red-200"
-                                    : isCorrect
-                                    ? "bg-green-50 border border-green-200"
-                                    : "bg-gray-50 border border-gray-200"
-                                }`}
-                              >
-                                <div className="flex items-center">
-                                  <div
-                                    className={`w-4 h-4 rounded-full mr-2 ${
-                                      isSelected ? "bg-primary" : "bg-gray-200"
-                                    }`}
-                                  ></div>
-                                  <span>{option.text}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {(question.type === "short-answer" ||
-                        question.type === "essay") && (
-                        <div className="mt-1 p-3 bg-gray-50 border rounded-md">
-                          {answer?.textAnswer || (
-                            <em className="text-gray-400">
-                              No answer provided
-                            </em>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {question.type === "multiple-choice" && correctOption && (
-                      <div className="mt-4">
-                        <p className="text-sm text-muted-foreground">
-                          Correct Answer:
-                        </p>
-                        <p className="mt-1 font-medium">{correctOption.text}</p>
-                      </div>
-                    )}
-
-                    {answer?.marksAwarded !== undefined && (
-                      <div className="mt-4 flex items-center">
-                        <div
-                          className={`px-2 py-1 rounded-md text-sm ${
-                            answer.marksAwarded === question.maxMarks
-                              ? "bg-green-100 text-green-800"
-                              : answer.marksAwarded > 0
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {answer.marksAwarded === question.maxMarks
-                            ? "Full marks"
-                            : answer.marksAwarded > 0
-                            ? "Partial marks"
-                            : "No marks"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-medium mb-2">Overall Performance</h3>
-              <div className="flex items-center">
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className={`h-4 rounded-full ${
-                      studentAnswer.percentage >= 70
-                        ? "bg-green-500"
-                        : studentAnswer.percentage >= 40
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
-                    }`}
-                    style={{ width: `${studentAnswer.percentage}%` }}
-                  ></div>
+                        return (
+                          <tr
+                            key={question._id}
+                            className={
+                              questionIndex % 2 === 0
+                                ? "bg-background"
+                                : "bg-muted/30"
+                            }
+                          >
+                            <td className="p-3 text-sm">{questionIndex + 1}</td>
+                            <td className="p-3 text-sm">{question.subject}</td>
+                            <td className="p-3 text-sm">{question.chapter}</td>
+                            <td className="p-3 text-sm">{question.topic}</td>
+                            <td className="p-3 text-sm">{question.category}</td>
+                            <td className="p-3 text-sm text-center">
+                              {question.maxMarks}
+                            </td>
+                            <td className="p-3 text-sm text-center">
+                              {answer?.marksAwarded || 0}/{question.maxMarks}{" "}
+                              marks
+                            </td>
+                            <td>
+                              {answer?.marksAwarded !== undefined && (
+                                <span
+                                  className={`mx-1 px-2 py-1 rounded-md text-sm ${
+                                    answer.marksAwarded === question.maxMarks
+                                      ? "bg-green-100 text-green-800"
+                                      : answer.marksAwarded > 0
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {answer.marksAwarded === question.maxMarks
+                                    ? "Full marks"
+                                    : answer.marksAwarded > 0
+                                    ? "Partial marks"
+                                    : "No marks"}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <span className="ml-4 font-medium">
-                  {studentAnswer.percentage}%
-                </span>
               </div>
-
-              <p className="mt-4 text-sm">
-                {studentAnswer.percentage >= 70
-                  ? "Excellent performance! Keep up the good work."
-                  : studentAnswer.percentage >= 40
-                  ? "Good effort, but there's room for improvement."
-                  : "Needs significant improvement. Consider reviewing the material again."}
-              </p>
             </div>
           </div>
         </div>

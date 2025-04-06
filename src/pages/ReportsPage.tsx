@@ -1,31 +1,22 @@
 import { Layout } from "@/components/layout/Layout";
-import { StudentAnswerList } from "@/components/reports/StudentAnswerList";
+import { ReportList } from "@/components/reports/ReportList";
 import { PageHeader } from "@/components/ui-components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Student, StudentAnswer, Test } from "@/lib/types";
-import { answersApi, studentsApi, testsApi } from "@/services/api.service";
+import { ReportCard } from "@/lib/types";
+import { reportCardsApi } from "@/services/api.service";
 import { useEffect, useState } from "react";
 
 const ReportsPage = () => {
   const { toast } = useToast();
-  const [studentAnswers, setStudentAnswers] = useState<StudentAnswer[]>([]);
-  const [tests, setTests] = useState<Test[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [testsData, answersData, studentsData] = await Promise.all([
-          testsApi.getAll(),
-          answersApi.getAll(),
-          studentsApi.getAll(),
-        ]);
-
-        setTests(testsData);
-        setStudentAnswers(answersData);
-        setStudents(studentsData);
+        const reportData = await reportCardsApi.getAll();
+        setReportCards(reportData);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -55,11 +46,7 @@ const ReportsPage = () => {
           </div>
         ) : (
           <div className="mt-8">
-            <StudentAnswerList
-              studentAnswers={studentAnswers}
-              tests={tests}
-              students={students}
-            />
+            <ReportList reportCards={reportCards} />
           </div>
         )}
       </div>
