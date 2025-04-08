@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
-  BarChart,
   FileText,
   GraduationCap,
   LandPlot,
@@ -27,7 +26,6 @@ const menuItems = [
   { path: "/tests", label: "Tests", icon: FileText },
   { path: "/answers", label: "Student Answers", icon: LandPlot },
   { path: "/students", label: "Students", icon: GraduationCap },
-  { path: "/reports", label: "Reports", icon: BarChart },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 

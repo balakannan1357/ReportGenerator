@@ -1,5 +1,5 @@
 import { environment } from "@/environments/environment";
-import { Student, StudentAnswer, Test } from "@/lib/types";
+import { ReportCard, Student, StudentAnswer, Test } from "@/lib/types";
 
 const API_URL = environment.apiUrl;
 
@@ -100,3 +100,4 @@ function createCrudApi<T>(
 export const testsApi = createCrudApi<Test>("/tests");
 export const answersApi = createCrudApi<StudentAnswer>("/studentAnswers");
 export const studentsApi = createCrudApi<Student>("/students");
+export const reportCardsApi = createCrudApi<ReportCard>("/reports");

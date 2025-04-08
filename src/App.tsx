@@ -12,7 +12,6 @@ import CreateTestPage from "./pages/CreateTestPage";
 import Dashboard from "./pages/Dashboard";
 import EditTestPage from "./pages/EditTestPage";
 import NotFound from "./pages/NotFound";
-import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import TestsPage from "./pages/TestsPage";
 import ViewReportPage from "./pages/ViewReportPage";
@@ -31,12 +30,11 @@ const App = () => (
           <Route path="/tests/new" element={<CreateTestPage />} />
           <Route path="/tests/:testId" element={<EditTestPage />} />
           <Route path="/answers" element={<AnswersPage />} />
+          <Route path="/answers/:answerId" element={<ViewReportPage />} />
           <Route path="/answers/new" element={<CreateAnswerPage />} />
           <Route path="/students" element={<StudentList />}></Route>
           <Route path="/students/new" element={<CreateStudent />} />
           <Route path="/students/:studentId" element={<EditStudent />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/reports/:answerId" element={<ViewReportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

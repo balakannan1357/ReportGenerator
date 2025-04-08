@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -9,9 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { QuestionType } from "@/lib/enum";
-import { Answer, Question, Student, StudentAnswer, Test } from "@/lib/types";
+import { obtainedMarksOptions } from "@/lib/constants";
+import { Answer, Student, StudentAnswer, Test } from "@/lib/types";
 import { calculatePercentage, formatShortDate } from "@/lib/utils";
 import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -19,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 interface AnswerFormProps {
   readonly tests: Test[];
-  readonly students: Student[];
+  readonly students?: Student[];
   readonly initialStudentAnswer?: StudentAnswer;
   readonly onSubmit: (studentAnswer: StudentAnswer) => void;
   readonly isSubmitting?: boolean;
@@ -33,6 +30,7 @@ export function AnswerForm({
   isSubmitting = false,
 }: AnswerFormProps) {
   const navigate = useNavigate();
+
   const [selectedTestId, setSelectedTestId] = useState<string>(
     initialStudentAnswer?.testId || ""
   );
@@ -58,8 +56,6 @@ export function AnswerForm({
         if (!initialStudentAnswer) {
           const initialAnswers = test.questions.map((question) => ({
             questionId: question._id,
-            selectedOptionId: "",
-            textAnswer: "",
             marksAwarded: 0,
           }));
 
@@ -73,33 +69,22 @@ export function AnswerForm({
     }
   }, [selectedTestId, tests, initialStudentAnswer]);
 
-  const updateAnswer = (question: Question, answerData: Partial<Answer>) => {
+  const updateAnswer = (questionId: string, marksAwarded: number) => {
     setStudentAnswer((prev) => {
       const updatedAnswers = [...prev.answers];
       const answerIndex = updatedAnswers.findIndex(
-        (a) => a.questionId === question._id
+        (a) => a.questionId === questionId
       );
-      const isCorrect =
-        question.options?.find((o) => o._id === answerData.selectedOptionId)
-          ?.isCorrect ?? false;
-      const marksAwarded =
-        question.type === QuestionType.MULTIPLE_CHOICE
-          ? isCorrect
-            ? question.maxMarks
-            : 0
-          : updatedAnswers[answerIndex]?.marksAwarded;
 
       if (answerIndex >= 0) {
         updatedAnswers[answerIndex] = {
           ...updatedAnswers[answerIndex],
-          ...answerData,
-          marksAwarded: answerData.marksAwarded || marksAwarded,
+          marksAwarded,
         };
       } else {
         updatedAnswers.push({
-          questionId: question._id,
+          questionId,
           marksAwarded,
-          ...answerData,
         } as Answer);
       }
 
@@ -142,7 +127,7 @@ export function AnswerForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-container">
+    <form onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div>
           <Label htmlFor="test-select">Select Test</Label>
@@ -157,7 +142,8 @@ export function AnswerForm({
             <SelectContent>
               {tests.map((test) => (
                 <SelectItem key={test._id} value={test._id}>
-                  {test.name} ({formatShortDate(test.date)})
+                  {test.name} ({test.course}, {test.batch}, {test.exam}) -{" "}
+                  {formatShortDate(test.date)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -195,96 +181,99 @@ export function AnswerForm({
             </div>
 
             {selectedTest && (
-              <div className="mt-8 space-y-8">
-                <h3 className="text-lg font-medium">Questions & Answers</h3>
+              <div className="mt-8 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Questions & Marks</h3>
+                  <div className="text-sm">
+                    <span className="font-medium">
+                      Total Marks: {calculateTotals().totalMarks} /{" "}
+                      {selectedTest.totalMarks}
+                    </span>
+                  </div>
+                </div>
 
-                {selectedTest.questions.map((question, questionIndex) => {
-                  const answer = studentAnswer.answers.find(
-                    (a) => a.questionId === question._id
-                  );
+                <div className="overflow-hidden border rounded-lg">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 text-left text-sm font-medium">
+                          No.
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Subject
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Chapter
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Topic
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Category
+                        </th>
+                        <th className="p-3 text-center text-sm font-medium">
+                          Max Marks
+                        </th>
+                        <th className="p-3 text-left text-sm font-medium">
+                          Marks Awarded
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {selectedTest.questions.map((question, questionIndex) => {
+                        const answer = studentAnswer.answers.find(
+                          (a) => a.questionId === question._id
+                        );
 
-                  return (
-                    <div key={question._id} className="p-6 border rounded-lg">
-                      <div className="mb-4">
-                        <h4 className="font-medium mb-1">
-                          Question {questionIndex + 1}
-                        </h4>
-                        <p>{question.text}</p>
-                      </div>
-
-                      <div className="mt-4">
-                        <Label>Student Answer</Label>
-
-                        {question.type === "multiple-choice" &&
-                          question.options && (
-                            <RadioGroup
-                              value={answer?.selectedOptionId || ""}
-                              onValueChange={(value) =>
-                                updateAnswer(question, {
-                                  selectedOptionId: value,
-                                })
-                              }
-                              className="mt-2 space-y-2"
-                            >
-                              {question.options.map((option) => (
-                                <div
-                                  key={option._id}
-                                  className="flex items-center space-x-2"
-                                >
-                                  <RadioGroupItem
-                                    value={option._id}
-                                    id={option._id}
-                                  />
-                                  <Label
-                                    htmlFor={option._id}
-                                    className="font-normal"
-                                  >
-                                    {option.text}
-                                  </Label>
-                                </div>
-                              ))}
-                            </RadioGroup>
-                          )}
-
-                        {(question.type === "short-answer" ||
-                          question.type === "essay") && (
-                          <Textarea
-                            value={answer?.textAnswer || ""}
-                            onChange={(e) =>
-                              updateAnswer(question, {
-                                textAnswer: e.target.value,
-                              })
+                        return (
+                          <tr
+                            key={question._id}
+                            className={
+                              questionIndex % 2 === 0
+                                ? "bg-background"
+                                : "bg-muted/30"
                             }
-                            className="mt-2"
-                            placeholder="Enter student's answer"
-                          />
-                        )}
-
-                        <div className="mt-4">
-                          <Label htmlFor={`marks-${question._id}`}>
-                            Marks Awarded (max: {question.maxMarks})
-                          </Label>
-                          <Input
-                            id={`marks-${question._id}`}
-                            type="number"
-                            min="0"
-                            max={question.maxMarks}
-                            value={answer?.marksAwarded || 0}
-                            onChange={(e) =>
-                              updateAnswer(question, {
-                                marksAwarded: Math.min(
-                                  parseInt(e.target.value) || 0,
-                                  question.maxMarks
-                                ),
-                              })
-                            }
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                          >
+                            <td className="p-3 text-sm">{questionIndex + 1}</td>
+                            <td className="p-3 text-sm">{question.subject}</td>
+                            <td className="p-3 text-sm">{question.chapter}</td>
+                            <td className="p-3 text-sm">{question.topic}</td>
+                            <td className="p-3 text-sm">{question.category}</td>
+                            <td className="p-3 text-sm text-center">
+                              {question.maxMarks}
+                            </td>
+                            <td className="p-3">
+                              <Select
+                                value={answer?.marksAwarded?.toString() || "0"}
+                                onValueChange={(value) =>
+                                  updateAnswer(question._id, parseFloat(value))
+                                }
+                              >
+                                <SelectTrigger className="w-20">
+                                  <SelectValue>
+                                    {answer?.marksAwarded
+                                      ? answer?.marksAwarded?.toString()
+                                      : "0"}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {obtainedMarksOptions.map((mark) => (
+                                    <SelectItem
+                                      key={mark}
+                                      value={mark.toString()}
+                                    >
+                                      {mark}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -306,7 +295,7 @@ export function AnswerForm({
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Answers
+                    Submit & View Report
                   </>
                 )}
               </Button>

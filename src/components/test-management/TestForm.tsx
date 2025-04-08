@@ -14,9 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { QuestionType } from "@/lib/enum";
-import { Option, Question, Test } from "@/lib/types";
+import {
+  batches,
+  chapters,
+  courses,
+  exams,
+  maxMarksOptions,
+  subjects,
+  topics,
+} from "@/lib/constants";
+import { QuestionCategory } from "@/lib/enum";
+import { Question, Test } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -24,10 +32,18 @@ import {
   Loader2,
   Plus,
   Save,
-  Trash,
+  Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 interface TestFormProps {
   readonly initialTest?: Test;
@@ -51,150 +67,183 @@ export function TestForm({
       date: format(new Date(), "yyyy-MM-dd"),
       description: "",
       questions: [],
+      course: "",
+      batch: "",
+      exam: "",
+      totalMarks: 0,
     }
   );
 
-  const addQuestion = () => {
-    setTest({
-      ...test,
+  const [errors, setErrors] = useState<{ [key: number]: string }>({});
+
+  useEffect(() => {
+    const totalMarks = test.questions.reduce((sum, q) => sum + q.maxMarks, 0);
+    setTest((prev) => ({ ...prev, totalMarks }));
+  }, [test.questions]);
+
+  const updateQuestion = (index: number, updates: Partial<Question>) => {
+    const updated = [...test.questions];
+    updated[index] = { ...updated[index], ...updates };
+    setTest({ ...test, questions: updated });
+  };
+
+  const handleAddQuestion = () => {
+    setTest((prev) => ({
+      ...prev,
       questions: [
-        ...test.questions,
+        ...prev.questions,
         {
-          text: "",
-          type: QuestionType.MULTIPLE_CHOICE,
-          maxMarks: 1,
-          options: [
-            { text: "", isCorrect: false },
-            { text: "", isCorrect: false },
-            { text: "", isCorrect: false },
-          ],
+          subject: "",
+          chapter: "",
+          topic: "",
+          category: "" as QuestionCategory,
+          maxMarks: 4,
         },
       ],
-    });
+    }));
   };
 
-  const updateQuestion = (index: number, question: Partial<Question>) => {
-    const updatedQuestions = [...test.questions];
-    updatedQuestions[index] = { ...updatedQuestions[index], ...question };
-    setTest({ ...test, questions: updatedQuestions });
+  const handleRemoveQuestion = (index: number) => {
+    const updated = test.questions.filter((_, i) => i !== index);
+    setTest((prev) => ({ ...prev, items: updated }));
   };
 
-  const removeQuestion = (index: number) => {
-    const updatedQuestions = [...test.questions];
-    updatedQuestions.splice(index, 1);
-    setTest({ ...test, questions: updatedQuestions });
-  };
+  const validate = () => {
+    const newErrors: { [key: number]: string } = {};
+    const seen = new Set<string>();
 
-  const addOption = (questionIndex: number) => {
-    const updatedQuestions = [...test.questions];
-    const question = updatedQuestions[questionIndex];
-
-    if (!question.options) {
-      question.options = [];
-    }
-
-    question.options.push({
-      text: "",
-      isCorrect: false,
-    });
-
-    setTest({ ...test, questions: updatedQuestions });
-  };
-
-  const updateOption = (
-    questionIndex: number,
-    optionIndex: number,
-    option: Partial<Option>
-  ) => {
-    const updatedQuestions = [...test.questions];
-    const question = updatedQuestions[questionIndex];
-
-    if (question.options) {
-      question.options[optionIndex] = {
-        ...question.options[optionIndex],
-        ...option,
-      };
-
-      if (option.isCorrect) {
-        question.options.forEach((opt, idx) => {
-          if (idx !== optionIndex) {
-            opt.isCorrect = false;
-          }
-        });
+    test.questions.forEach((entry, idx) => {
+      if (!entry.subject || !entry.chapter || !entry.topic || !entry.category) {
+        newErrors[idx] = "All fields are required";
+      } else {
+        const key = `${entry.subject}-${entry.chapter}-${entry.topic}-${entry.category}`;
+        if (seen.has(key)) {
+          newErrors[idx] = "Duplicate question entry";
+        } else {
+          seen.add(key);
+        }
       }
+    });
 
-      setTest({ ...test, questions: updatedQuestions });
-    }
-  };
-
-  const removeOption = (questionIndex: number, optionIndex: number) => {
-    const updatedQuestions = [...test.questions];
-    const question = updatedQuestions[questionIndex];
-
-    if (question.options) {
-      question.options.splice(optionIndex, 1);
-      setTest({ ...test, questions: updatedQuestions });
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!validate()) return;
+
     onSubmit(test);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-container">
+    <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="test-name">Test Name</Label>
-          <Input
-            id="test-name"
-            value={test.name}
-            onChange={(e) => setTest({ ...test, name: e.target.value })}
-            placeholder="Enter test name"
-            required
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="test-name">Test Name</Label>
+            <Input
+              id="test-name"
+              value={test.name}
+              onChange={(e) => setTest({ ...test, name: e.target.value })}
+              placeholder="e.g. Math Midterm Practice"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="exam">Exam</Label>
+            <Select
+              value={test.exam}
+              onValueChange={(value) => setTest({ ...test, exam: value })}
+            >
+              <SelectTrigger id="exam">
+                <SelectValue placeholder="Select exam" />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((exam) => (
+                  <SelectItem key={exam} value={exam}>
+                    {exam}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div>
-          <Label>Test Date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Select a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  if (newDate) {
-                    setTest({ ...test, date: format(newDate, "yyyy-MM-dd") });
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="course">Course</Label>
+            <Select
+              value={test.course}
+              onValueChange={(value) => setTest({ ...test, course: value })}
+            >
+              <SelectTrigger id="course">
+                <SelectValue placeholder="Select course" />
+              </SelectTrigger>
+              <SelectContent>
+                {courses.map((course) => (
+                  <SelectItem key={course} value={course}>
+                    {course}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="batch">Batch</Label>
+            <Select
+              value={test.batch}
+              onValueChange={(value) => setTest({ ...test, batch: value })}
+            >
+              <SelectTrigger id="batch">
+                <SelectValue placeholder="Select batch" />
+              </SelectTrigger>
+              <SelectContent>
+                {batches.map((batch) => (
+                  <SelectItem key={batch} value={batch}>
+                    {batch}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Test Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : <span>Select a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(newDate) => {
+                    setDate(newDate);
+                    if (newDate) {
+                      setTest({ ...test, date: format(newDate, "yyyy-MM-dd") });
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
-        <div>
-          <Label htmlFor="test-description">Description</Label>
-          <Textarea
-            id="test-description"
-            value={test.description}
-            onChange={(e) => setTest({ ...test, description: e.target.value })}
-            placeholder="Enter test description"
-          />
+        <div className="text-right">
+          <span className="font-medium">Total Marks: {test.totalMarks}</span>
         </div>
       </div>
 
@@ -203,7 +252,7 @@ export function TestForm({
           <h3 className="text-lg font-medium">Questions</h3>
           <Button
             type="button"
-            onClick={addQuestion}
+            onClick={handleAddQuestion}
             variant="outline"
             size="sm"
           >
@@ -211,164 +260,183 @@ export function TestForm({
           </Button>
         </div>
 
-        {test.questions.length === 0 ? (
-          <div className="text-center p-12 border rounded-lg">
-            <p className="text-muted-foreground">No questions added yet</p>
-            <Button className="mt-4" type="button" onClick={addQuestion}>
-              Add Your First Question
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {test.questions.map((question, questionIndex) => (
-              <div key={question._id} className="p-6 border rounded-lg">
-                <div className="flex justify-between mb-4">
-                  <h4 className="font-medium">Question {questionIndex + 1}</h4>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    onClick={() => removeQuestion(questionIndex)}
+        <div>
+          <div className="w-full overflow-x-auto">
+            <Table className="table-fixed">
+              <TableHeader className="bg-gray-200">
+                <TableRow>
+                  <TableHead className="w-6 text-center">#</TableHead>
+                  <TableHead className="w-[150px]">Subject</TableHead>
+                  <TableHead className="min-w-[150px]">Chapter</TableHead>
+                  <TableHead className="min-w-[150px]">Topic</TableHead>
+                  <TableHead className="w-[200px]">Category</TableHead>
+                  <TableHead className="w-[80px] text-center">Max</TableHead>
+                  <TableHead className="w-[100px] text-center">
+                    Action
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {test.questions.map((item, index) => (
+                  <TableRow
+                    key={`${item.topic}-${index}`}
+                    className="odd:bg-white even:bg-gray-100 border-0"
                   >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor={`question-${questionIndex}`}>
-                      Question Text
-                    </Label>
-                    <Textarea
-                      id={`question-${questionIndex}`}
-                      value={question.text}
-                      onChange={(e) =>
-                        updateQuestion(questionIndex, { text: e.target.value })
-                      }
-                      placeholder="Enter question text"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`question-type-${questionIndex}`}>
-                        Question Type
-                      </Label>
+                    <TableCell className="w-6 text-center">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="min-w-[120px]">
                       <Select
-                        value={question.type}
-                        onValueChange={(value) =>
-                          updateQuestion(questionIndex, {
-                            type: value as QuestionType,
+                        value={item.subject}
+                        onValueChange={(v) =>
+                          updateQuestion(index, {
+                            subject: v,
+                            chapter: "",
+                            topic: "",
                           })
                         }
                       >
-                        <SelectTrigger id={`question-type-${questionIndex}`}>
-                          <SelectValue placeholder="Select type" />
+                        <SelectTrigger
+                          className="truncate"
+                          title={item.subject}
+                        >
+                          <SelectValue placeholder="Subject" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="multiple-choice">
-                            Multiple Choice
-                          </SelectItem>
-                          <SelectItem value="short-answer">
-                            Short Answer
-                          </SelectItem>
-                          <SelectItem value="essay">Essay</SelectItem>
+                          {subjects.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`question-marks-${questionIndex}`}>
-                        Marks
-                      </Label>
-                      <Input
-                        id={`question-marks-${questionIndex}`}
-                        type="number"
-                        min="1"
-                        value={question.maxMarks}
-                        onChange={(e) =>
-                          updateQuestion(questionIndex, {
-                            maxMarks: parseInt(e.target.value) || 1,
+                    </TableCell>
+                    <TableCell className="min-w-[150px]">
+                      <Select
+                        value={item.chapter}
+                        onValueChange={(v) =>
+                          updateQuestion(index, { chapter: v, topic: "" })
+                        }
+                      >
+                        <SelectTrigger
+                          className="truncate"
+                          title={item.chapter}
+                        >
+                          <SelectValue placeholder="Chapter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(chapters[item.subject] || []).map((ch) => (
+                            <SelectItem key={ch} value={ch}>
+                              {ch}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="min-w-[150px]">
+                      <Select
+                        value={item.topic}
+                        onValueChange={(v) =>
+                          updateQuestion(index, { topic: v })
+                        }
+                      >
+                        <SelectTrigger className="truncate" title={item.topic}>
+                          <SelectValue placeholder="Topic" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(topics[item.chapter] || []).map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="min-w-[100px]">
+                      <Select
+                        value={item.category}
+                        onValueChange={(v) =>
+                          updateQuestion(index, {
+                            category: v as QuestionCategory,
                           })
                         }
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {question.type === "multiple-choice" && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Answer Options</Label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addOption(questionIndex)}
+                      >
+                        <SelectTrigger
+                          className="truncate"
+                          title={item.category}
                         >
-                          <Plus className="h-3 w-3 mr-1" /> Add Option
-                        </Button>
-                      </div>
-
-                      {question.options && question.options.length > 0 ? (
-                        <div className="space-y-2">
-                          {question.options.map((option, optionIndex) => (
-                            <div
-                              key={option._id}
-                              className="flex items-center gap-2"
-                            >
-                              <Input
-                                value={option.text}
-                                onChange={(e) =>
-                                  updateOption(questionIndex, optionIndex, {
-                                    text: e.target.value,
-                                  })
-                                }
-                                placeholder={`Option ${optionIndex + 1}`}
-                                className="flex-1"
-                                required
-                              />
-                              <div className="flex items-center gap-2">
-                                <label className="flex items-center gap-1 cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    checked={option.isCorrect}
-                                    onChange={() =>
-                                      updateOption(questionIndex, optionIndex, {
-                                        isCorrect: true,
-                                      })
-                                    }
-                                    className="h-4 w-4"
-                                  />
-                                  <span className="text-sm">Correct</span>
-                                </label>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    removeOption(questionIndex, optionIndex)
-                                  }
-                                >
-                                  <Trash className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(QuestionCategory).map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
                           ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No options added yet
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="w-[80px] text-center">
+                      <Select
+                        value={item.maxMarks.toString()}
+                        onValueChange={(v) =>
+                          updateQuestion(index, { maxMarks: +v })
+                        }
+                      >
+                        <SelectTrigger
+                          className="truncate"
+                          title={item.maxMarks.toString()}
+                        >
+                          <SelectValue placeholder="Max" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {maxMarksOptions.map((m) => (
+                            <SelectItem key={m} value={m.toString()}>
+                              {m}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    <TableCell className="w-[60px] text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveQuestion(index)}
+                      >
+                        <Trash2 className="text-red-500 w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {test.questions.length === 0 && (
+              <div className="text-center p-3">
+                <p className="text-muted-foreground">No questions added yet</p>
+                <Button
+                  className="mt-4"
+                  type="button"
+                  onClick={handleAddQuestion}
+                >
+                  Add Your First Question
+                </Button>
               </div>
-            ))}
+            )}
           </div>
-        )}
+
+          {Object.keys(errors).length > 0 && (
+            <div className="text-red-500 text-sm mt-2">
+              {Object.entries(errors).map(([idx, msg]) => (
+                <div key={idx}>
+                  Row {+idx + 1}: {msg}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end gap-4 mt-8">
