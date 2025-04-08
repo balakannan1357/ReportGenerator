@@ -175,7 +175,7 @@ const ViewReportPage = () => {
             <div className="space-y-6">
               <div className="p-4 border rounded-md">
                 <div className="flex justify-between">
-                  <table className="table-fixed w-full">
+                  <table className="w-full">
                     <thead className="bg-muted">
                       <tr>
                         <th className="p-3 w-[60px] text-left text-sm font-medium">

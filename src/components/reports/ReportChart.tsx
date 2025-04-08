@@ -13,6 +13,7 @@ import {
 } from "chart.js";
 import jsPDF from "jspdf";
 import {
+  createRef,
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -46,13 +47,10 @@ export type ChildRef = {
 
 const ReportChart = forwardRef<ChildRef, ReportChartProps>(
   ({ studentAnswer, test, student }: ReportChartProps, ref) => {
-    const categoryRef = useRef(null);
-    const subjectRef = useRef(null);
-    const topicRef = useRef(null);
-
-    const categoryCanvasRef = useRef(null);
     const subjectCanvasRef = useRef(null);
     const topicCanvasRef = useRef(null);
+
+    const subjectCategoryRefs = useRef<Record<string, any>>({});
 
     const [isExporting, setIsExporting] = useState(false);
     useEffect(() => {
@@ -64,7 +62,10 @@ const ReportChart = forwardRef<ChildRef, ReportChartProps>(
     }));
 
     const groupedData = useMemo(() => {
-      const categoryMap = {};
+      const subjectCategoryMap: Record<
+        string,
+        Record<string, { max: number; obtained: number }>
+      > = {};
       const subjectMap = {};
       const topicData = [];
 
@@ -72,39 +73,51 @@ const ReportChart = forwardRef<ChildRef, ReportChartProps>(
         const { category, subject, topic, maxMarks } = test.questions.find(
           (question) => question._id === questionId
         );
-        categoryMap[category] = categoryMap[category] || {
-          max: 0,
-          obtained: 0,
-        };
-        categoryMap[category].max += maxMarks;
-        categoryMap[category].obtained += marksAwarded;
 
+        if (marksAwarded / maxMarks < 0.2) marksAwarded = 0;
+
+        if (!subjectCategoryMap[subject]) {
+          subjectCategoryMap[subject] = {};
+        }
+
+        if (!subjectCategoryMap[subject][category]) {
+          subjectCategoryMap[subject][category] = { max: 0, obtained: 0 };
+        }
+
+        subjectCategoryMap[subject][category].max += maxMarks;
+        subjectCategoryMap[subject][category].obtained += marksAwarded;
         subjectMap[subject] = subjectMap[subject] || 0;
         subjectMap[subject] += marksAwarded;
 
         topicData.push({ topic, max: maxMarks, obtained: marksAwarded });
       });
 
-      return { categoryMap, subjectMap, topicData };
+      return { subjectCategoryMap, subjectMap, topicData };
     }, [studentAnswer, test]);
 
-    const categoryChartData = {
-      labels: Object.keys(groupedData.categoryMap),
-      datasets: [
-        {
-          label: "Max Marks",
-          data: Object.values(groupedData.categoryMap).map((d: any) => d.max),
-          backgroundColor: "#e2e8f0",
-        },
-        {
-          label: "Obtained Marks",
-          data: Object.values(groupedData.categoryMap).map(
-            (d: any) => d.obtained
-          ),
-          backgroundColor: "#6366f1",
-        },
-      ],
-    };
+    const subjectCategoryChartData = Object.entries(
+      groupedData.subjectCategoryMap
+    ).map(([subject, categories]) => {
+      if (!subjectCategoryRefs.current[subject]) {
+        subjectCategoryRefs.current[subject] = createRef();
+      }
+      const chartData = {
+        labels: Object.keys(categories),
+        datasets: [
+          {
+            label: "Max Marks",
+            data: Object.values(categories).map((c) => c.max),
+            backgroundColor: "#e2e8f0",
+          },
+          {
+            label: "Obtained Marks",
+            data: Object.values(categories).map((c) => c.obtained),
+            backgroundColor: "#6366f1",
+          },
+        ],
+      };
+      return { subject, chartData };
+    });
 
     const subjectPieData = {
       labels: Object.keys(groupedData.subjectMap),
@@ -340,7 +353,20 @@ const ReportChart = forwardRef<ChildRef, ReportChartProps>(
           yPosition += imgHeight + 10;
         };
 
-        addChartToPDF(getChartImage(categoryCanvasRef), "Category-wise Marks");
+        for (const [subject, chartRef] of Object.entries(
+          subjectCategoryRefs.current
+        )) {
+          const chartInstance = chartRef.current;
+          if (!chartInstance) continue;
+
+          const canvas = chartInstance.canvas;
+          const imageData = canvas ? canvas.toDataURL("image/png", 1.0) : null;
+
+          if (imageData) {
+            addChartToPDF(imageData, `${subject} - Category-wise Marks`);
+          }
+        }
+
         addChartToPDF(
           getChartImage(subjectCanvasRef),
           "Subject-wise Marks Distribution"
@@ -420,16 +446,25 @@ const ReportChart = forwardRef<ChildRef, ReportChartProps>(
 
     return (
       <div className="space-y-8 bg-white max-w-4xl mx-auto">
-        <div ref={categoryRef} className=" bg-white p-4 ">
-          <h3 className="text-lg font-semibold mb-2">Category-wise Marks</h3>
-          <Bar
-            ref={categoryCanvasRef}
-            data={categoryChartData}
-            options={{ responsive: true }}
-          />
-        </div>
+        {subjectCategoryChartData.map(({ subject, chartData }) => {
+          return (
+            <div
+              key={subject}
+              className="bg-white p-4 border rounded-md shadow-sm"
+            >
+              <h3 className="text-lg font-semibold mb-2">
+                {subject} - Category-wise Marks
+              </h3>
+              <Bar
+                ref={subjectCategoryRefs.current[subject]}
+                data={chartData}
+                options={{ responsive: true }}
+              />
+            </div>
+          );
+        })}
 
-        <div ref={subjectRef} className=" bg-white p-4 ">
+        <div className=" bg-white p-4 ">
           <h3 className="text-lg font-semibold mb-2">
             Subject-wise Marks Distribution
           </h3>
@@ -440,7 +475,7 @@ const ReportChart = forwardRef<ChildRef, ReportChartProps>(
           />
         </div>
 
-        <div ref={topicRef} className=" bg-white p-4 ">
+        <div className=" bg-white p-4 ">
           <h3 className="text-lg font-semibold mb-2">Topic-wise Performance</h3>
           <Bar
             ref={topicCanvasRef}
